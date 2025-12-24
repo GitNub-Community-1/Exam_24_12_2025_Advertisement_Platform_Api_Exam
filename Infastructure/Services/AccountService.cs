@@ -40,6 +40,8 @@ public class AccountService : IAccountService
     {
         var mapped = new User
         {
+            FirstName =  model.FirstName,
+            LastName = model.LastName,
             UserName = model.Username,
             Email = model.Email,
             PhoneNumber = model.PhoneNumber
