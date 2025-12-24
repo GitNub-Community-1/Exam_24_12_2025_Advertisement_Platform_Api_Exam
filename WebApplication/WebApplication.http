@@ -1,0 +1,6 @@
+@Advertisement_Platform_Api_Exam_HostAddress = http://localhost:5004
+
+GET {{Advertisement_Platform_Api_Exam_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
