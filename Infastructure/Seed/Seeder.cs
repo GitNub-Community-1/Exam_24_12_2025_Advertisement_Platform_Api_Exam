@@ -48,7 +48,9 @@ public class Seeder
         {
             UserName = "admin",
             PhoneNumber = "13456777",
-            Email = "admin@gmail.com"
+            Email = "admin@gmail.com",
+            FirstName = "Admin",
+            LastName = "User"
         };
 
         var result = await _userManager.CreateAsync(identity, "hello123");

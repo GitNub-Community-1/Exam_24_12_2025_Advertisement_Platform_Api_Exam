@@ -37,6 +37,8 @@ builder.Services.AddIdentity<User, IdentityRole<long>>(config =>
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
+builder.Services.AddScoped<UserManager<User>>();
+builder.Services.AddScoped<RoleManager<IdentityRole<long>>>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -102,16 +104,20 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 
-using (var scope = app.Services.CreateScope())
+if (!builder.Environment.IsEnvironment("EfMigration"))
 {
+    // Runtime-код
+    using var scope = app.Services.CreateScope();
     var services = scope.ServiceProvider;
+
     var dbContext = services.GetRequiredService<ApplicationDbContext>();
-    await dbContext.Database.MigrateAsync();  
+    await dbContext.Database.MigrateAsync();
 
     var seeder = services.GetRequiredService<Seeder>();
-    await seeder.SeedRole();   
-    await seeder.SeedUser();   
+    await seeder.SeedRole();
+    await seeder.SeedUser();
 }
+
 
 app.UseMiddleware<CustomLoggingMiddleware>();
 
