@@ -1,0 +1,136 @@
+﻿Кори синфи ва хонаги!
+
+Тема: Фоновые задачи и планировщик заданий в Advertisement Platform API
+В проекте Advertisement Platform API необходимо реализовать фоновые процессы, которые автоматически обслуживают объявления и систему в целом.
+Фоновые задачи должны выполняться независимо от HTTP-запросов
+
+
+1. Автоматическое деактивирование объявлений (BackgroundService)
+ Реализовать фоновую задачу, которая:
+   - периодически проверяет объявления в базе данных;
+   - находит объявления, у которых истёк срок активности;
+   - автоматически переводит такие объявления в неактивный статус;
+   - записывает информацию о выполненной операции в лог.
+
+Фоновая служба должна быть реализована с использованием BackgroundService или IHostedService + Timer.
+
+2. Очистка неактивных объявлений (Quartz Job)
+Реализовать фоновую задачу, которая:
+   - запускается по расписанию (например, один раз в день);
+   - удаляет объявления, которые находятся в неактивном состоянии дольше недели;
+   - выполняется с использованием Quartz.NET.
+   
+   
+   
+   
+  
+namespace MiniLibraryAPI.Workers;
+
+public class WorkerWithTimer : BackgroundService
+{
+    private Timer _timer;
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _timer = new Timer(Work, null, 2000, Timeout.Infinite);
+        return Task.CompletedTask;
+    }
+
+    private void Work(object state)
+    {
+        Console.WriteLine("WorkerWithTimer running at: " + DateTime.Now);
+        
+        _timer.Change(2000, Timeout.Infinite);
+    }
+}
+
+
+
+
+using Quartz;
+
+namespace MiniLibraryAPI.Workers;
+
+public class WorkerWithQuartz : IJob
+{
+    public Task Execute(IJobExecutionContext context)
+    {
+        Console.WriteLine("WorkerWithQuartz running at: " + DateTime.Now);
+
+        // Implement your job logic here
+        return Task.CompletedTask;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+namespace MiniLibraryAPI.Workers;
+
+public class SimpleWorker : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                Console.WriteLine("SimpleWorker running at: " + DateTime.Now);
+                // выполнение фоновой задачи
+            }
+            catch (Exception ex)
+            {
+                // обработка ошибки однократного неуспешного выполнения фоновой задачи
+            }
+ 
+            await Task.Delay(1000);
+        }
+    }
+}
+
+
+
+
+addSwagger...
+builder.Services.AddQuartz();
+builder.Services.AddQuartzHostedService(opt =>
+{
+    opt.WaitForJobsToComplete = true;
+});
+
+
+var app = builder......
+
+var schedulerFactory = app.Services.GetRequiredService<ISchedulerFactory>();
+var scheduler = await schedulerFactory.GetScheduler();
+
+var workerWithQuartz = JobBuilder.Create<WorkerWithQuartz>()
+    .WithIdentity("WorkerWithQuartz")
+    .Build();
+
+// каждый 100 миллисекунд
+var workerWithQuartzTrigger = TriggerBuilder.Create()
+    .WithIdentity("WorkerWithQuartzTrigger")
+    .WithSimpleSchedule(scheduleBuilder => scheduleBuilder
+        .WithInterval(TimeSpan.FromMilliseconds(100))
+        .RepeatForever())
+    // .WithSchedule(CronScheduleBuilder.CronSchedule("*/10 * * * *"))
+    // .WithSchedule(CronScheduleBuilder.DailyAtHourAndMinute(19, 05))
+    // .WithSimpleSchedule(scheduleBuilder => scheduleBuilder.WithIntervalInSeconds(100).RepeatForever())
+    .ForJob(workerWithQuartz)
+    .Build();
+
+scheduler.ScheduleJob(workerWithQuartz, workerWithQuartzTrigger)
+    .GetAwaiter().GetResult();
+
+
+
+
+
+

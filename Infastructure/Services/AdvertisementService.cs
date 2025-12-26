@@ -42,13 +42,17 @@ public class AdvertisementService(ApplicationDbContext context, IMapper mapper) 
         {
             query = query.Where(x => x.Status == filter.Status.Value);
         }
+        if (filter.CategoryId.HasValue)
+        {
+            query = query.Where(x => x.CategoryId == filter.CategoryId.Value);
+        }
 
         var todoitem = await query.ToListAsync();
         var result = mapper.Map<List<AdDto>>(todoitem);
         return new Response<List<AdDto>>
         {
             StatusCode = (int)HttpStatusCode.OK,
-            Message = "Advertisements retrieved successfully!",
+            Message = "Advertisements retrieved successfully!",         
             Data = result
         };
         /*}*/
@@ -78,7 +82,7 @@ public class AdvertisementService(ApplicationDbContext context, IMapper mapper) 
     {
         /*try
        {*/
-        var check = await context.Advertisements.FindAsync(adDto_.Id);
+          var check = await context.Advertisements.FindAsync(adDto_.Id);
         if (check == null)
             return new Response<AdDto>(HttpStatusCode.NotFound, "Advertisements not found");
             
@@ -87,6 +91,7 @@ public class AdvertisementService(ApplicationDbContext context, IMapper mapper) 
         check.Price = adDto_.Price;
         check.CreatedDate = adDto_.CreatedDate;
         check.Status = adDto_.Status;
+        check.CategoryId = adDto_.CategoryId;
         context.Advertisements.Update(check);
         await context.SaveChangesAsync();
         var result = mapper.Map<AdDto>(check);

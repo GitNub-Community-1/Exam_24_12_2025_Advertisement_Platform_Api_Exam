@@ -3,6 +3,7 @@ using System;
 using Infastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251225144849_Last miggration add one field in Entity model adver...")]
+    partial class LastmiggrationaddonefieldinEntitymodeladver
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,15 +39,15 @@ namespace Infastructure.Migrations
                     b.Property<long?>("CategoryId1")
                         .HasColumnType("bigint");
 
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateOnly>("CreatedDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime>("DisActiveDate")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateOnly>("DisActiveDate")
+                        .HasColumnType("date");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric");

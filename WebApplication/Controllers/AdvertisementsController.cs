@@ -33,7 +33,7 @@ public class AdvertisementController(IAdvertisementService _advertisementService
         return StatusCode(response.StatusCode, response);
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin,User,Moderator")]
     [HttpPost]
     public async Task<ActionResult<Response<AdDto>>> AddAdvertisement(
         [FromBody] AdCreatDto adCreatDto)
