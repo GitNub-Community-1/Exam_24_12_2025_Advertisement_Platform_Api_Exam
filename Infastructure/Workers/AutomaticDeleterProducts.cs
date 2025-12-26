@@ -18,12 +18,9 @@ public class AutomaticDeleterProducts : IJob
         using var scope = _scopeFactory.CreateScope(); 
         var _context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var products = await _context.Advertisements
-            .Where(x => x.Status == 1 && x.DisActiveDate !=null)
+            .Where(x => x.Status == 1 && x.DisActiveDate <= DateTime.UtcNow)
             .ToListAsync();
-        foreach (var product in products)
-        {
-             _context.Advertisements.Remove(product);
-        }
+        _context.Advertisements.RemoveRange(products);
         await _context.SaveChangesAsync();
     }
 }
