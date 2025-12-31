@@ -23,7 +23,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 
 var emailConfig = builder.Configuration.GetSection("EmailConfiguration").Get<EmailConfiguration>();
-builder.Services.AddSingleton(emailConfig);
+if (emailConfig != null)
+{
+    builder.Services.AddSingleton(emailConfig);
+}
 builder.Services.AddSingleton<IEmailService, EmailService>();
 
 
@@ -60,6 +63,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+
+builder.Services.AddMemoryCache();
 
 builder.Services.AddScoped<Seeder>();
 builder.Services.AddScoped<IAdvertisementService, AdvertisementService>();

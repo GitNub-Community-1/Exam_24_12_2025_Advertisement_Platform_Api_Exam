@@ -5,16 +5,25 @@ using Domain.Models.Entity;
 using Domain.Models.Filters;
 using Infastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using WebAPIWithJWTAndIdentity.Response;
 
 namespace Infrastructure.Services;
 
-public class AdvertisementService(ApplicationDbContext context, IMapper mapper) : IAdvertisementService
+public class AdvertisementService(ApplicationDbContext context, IMapper mapper, IMemoryCache memoryCache) : IAdvertisementService
 {
     public async Task<Response<List<AdDto>>> GetAdvertisementAsync(AdFilter filter)
     {
         /*try
         {*/
+        const string cacheKey = "advertisements_list";
+        
+        // Проверяем кеш
+        if (memoryCache.TryGetValue(cacheKey, out Response<List<AdDto>>? cachedResponse))
+        {
+            return cachedResponse!;
+        }
+        
         var query = context.Advertisements
             .AsQueryable();
             
@@ -49,12 +58,19 @@ public class AdvertisementService(ApplicationDbContext context, IMapper mapper) 
 
         var todoitem = await query.ToListAsync();
         var result = mapper.Map<List<AdDto>>(todoitem);
-        return new Response<List<AdDto>>
+        var response = new Response<List<AdDto>>
         {
             StatusCode = (int)HttpStatusCode.OK,
             Message = "Advertisements retrieved successfully!",         
             Data = result
         };
+        
+        // Сохраняем в кеш со скользящей эспирацией (10 минут)
+        var cacheEntryOptions = new MemoryCacheEntryOptions()
+            .SetSlidingExpiration(TimeSpan.FromMinutes(10));
+        memoryCache.Set(cacheKey, response, cacheEntryOptions);
+        
+        return response;
         /*}*/
         /*catch (Exception ex)
         {
@@ -70,6 +86,10 @@ public class AdvertisementService(ApplicationDbContext context, IMapper mapper) 
         context.Advertisements.Add(ad);
         await context.SaveChangesAsync();
         var result = mapper.Map<AdDto>(ad);
+        
+        // Инвалидируем кеш списка объявлений
+        memoryCache.Remove("advertisements_list");
+        
         return new Response<AdDto>(HttpStatusCode.Created, "Advertisements created successfully!", result);
         /*}*/
         /*catch (Exception ex)
@@ -95,6 +115,11 @@ public class AdvertisementService(ApplicationDbContext context, IMapper mapper) 
         context.Advertisements.Update(check);
         await context.SaveChangesAsync();
         var result = mapper.Map<AdDto>(check);
+        
+        // Инвалидируем кеш
+        memoryCache.Remove($"advertisement_{adDto_.Id}");
+        memoryCache.Remove("advertisements_list");
+        
         return new Response<AdDto>(HttpStatusCode.OK, "Advertisements updated successfully!", result);
         /*}*/
         /*catch (Exception ex)
@@ -113,6 +138,11 @@ public class AdvertisementService(ApplicationDbContext context, IMapper mapper) 
 
         context.Advertisements.Remove(advertisements);
         await context.SaveChangesAsync();
+        
+        // Инвалидируем кеш
+        memoryCache.Remove($"advertisement_{id}");
+        memoryCache.Remove("advertisements_list");
+        
         return new Response<string>(HttpStatusCode.OK, "Advertisements deleted successfully!");
 
         /*catch (Exception ex)
@@ -124,12 +154,27 @@ public class AdvertisementService(ApplicationDbContext context, IMapper mapper) 
     {
         /*try
         {*/
+        string cacheKey = $"advertisement_{id}";
+        
+        // Проверяем кеш
+        if (memoryCache.TryGetValue(cacheKey, out Response<AdDto>? cachedResponse))
+        {
+            return cachedResponse!;
+        }
+        
         var advertisements = await context.Advertisements.FirstOrDefaultAsync(a => a.Id == id);
         if (advertisements == null)
             return new Response<AdDto>(HttpStatusCode.NotFound, "Advertisements not found");
             
         var result = mapper.Map<AdDto>(advertisements);
-        return new Response<AdDto>(HttpStatusCode.OK, "Advertisements retrieved successfully!", result);
+        var response = new Response<AdDto>(HttpStatusCode.OK, "Advertisements retrieved successfully!", result);
+        
+        // Сохраняем в кеш с абсолютной эспирацией (5 минут)
+        var cacheEntryOptions = new MemoryCacheEntryOptions()
+            .SetAbsoluteExpiration(TimeSpan.FromMinutes(5));
+        memoryCache.Set(cacheKey, response, cacheEntryOptions);
+        
+        return response;
         
         /*catch (Exception ex)
         {

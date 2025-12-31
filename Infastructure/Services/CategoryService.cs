@@ -5,16 +5,25 @@ using Domain.Models.Entity;
 using Domain.Models.Filters;
 using Infastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using WebAPIWithJWTAndIdentity.Response;
 
 namespace Infrastructure.Services;
 
-public class CategoryService(ApplicationDbContext context, IMapper mapper) : ICategoryService
+public class CategoryService(ApplicationDbContext context, IMapper mapper, IMemoryCache memoryCache) : ICategoryService
 {
     public async Task<Response<List<CategoryDto>>> GetCategoryAsync(CategoryFilter filter)
     {
         /*try
        {*/
+        const string cacheKey = "categories_list";
+        
+        // Проверяем кеш
+        if (memoryCache.TryGetValue(cacheKey, out Response<List<CategoryDto>>? cachedResponse))
+        {
+            return cachedResponse!;
+        }
+        
         var query = context.Categories
             .AsQueryable();
             
@@ -28,12 +37,19 @@ public class CategoryService(ApplicationDbContext context, IMapper mapper) : ICa
         }
         var todoitem = await query.ToListAsync();
         var result = mapper.Map<List<CategoryDto>>(todoitem);
-        return new Response<List<CategoryDto>>
+        var response = new Response<List<CategoryDto>>
         {
             StatusCode = (int)HttpStatusCode.OK,
             Message = "Category retrieved successfully!",
             Data = result
         };
+        
+        // Сохраняем в кеш с абсолютной эспирацией (15 минут)
+        var cacheEntryOptions = new MemoryCacheEntryOptions()
+            .SetAbsoluteExpiration(TimeSpan.FromMinutes(15));
+        memoryCache.Set(cacheKey, response, cacheEntryOptions);
+        
+        return response;
         /*}*/
         /*catch (Exception ex)
         {
@@ -49,6 +65,10 @@ public class CategoryService(ApplicationDbContext context, IMapper mapper) : ICa
         context.Categories.Add(todoItem);
         await context.SaveChangesAsync();
         var result = mapper.Map<CategoryDto>(todoItem);
+        
+        // Инвалидируем кеш списка категорий
+        memoryCache.Remove("categories_list");
+        
         return new Response<CategoryDto>(HttpStatusCode.Created, "Category created successfully!", result);
         /*}*/
         /*catch (Exception ex)
@@ -69,6 +89,11 @@ public class CategoryService(ApplicationDbContext context, IMapper mapper) : ICa
         context.Categories.Update(check);
         await context.SaveChangesAsync();
         var result = mapper.Map<CategoryDto>(check);
+        
+        // Инвалидируем кеш
+        memoryCache.Remove($"category_{todoItemDto.Id}");
+        memoryCache.Remove("categories_list");
+        
         return new Response<CategoryDto>(HttpStatusCode.OK, "Category updated successfully!", result);
         /*}*/
         /*catch (Exception ex)
@@ -87,6 +112,11 @@ public class CategoryService(ApplicationDbContext context, IMapper mapper) : ICa
 
         context.Categories.Remove(category);
         await context.SaveChangesAsync();
+        
+        // Инвалидируем кеш
+        memoryCache.Remove($"category_{id}");
+        memoryCache.Remove("categories_list");
+        
         return new Response<string>(HttpStatusCode.OK, "Category deleted successfully!");
 
         /*catch (Exception ex)
@@ -99,12 +129,27 @@ public class CategoryService(ApplicationDbContext context, IMapper mapper) : ICa
     {
         /*try
        {*/
+        string cacheKey = $"category_{id}";
+        
+        // Проверяем кеш
+        if (memoryCache.TryGetValue(cacheKey, out Response<CategoryDto>? cachedResponse))
+        {
+            return cachedResponse!;
+        }
+        
         var category = await context.Categories.FirstOrDefaultAsync(a => a.Id == id);
         if (category == null)
             return new Response<CategoryDto>(HttpStatusCode.NotFound, "Category not found");
             
         var result = mapper.Map<CategoryDto>(category);
-        return new Response<CategoryDto>(HttpStatusCode.OK, "Category retrieved successfully!", result);
+        var response = new Response<CategoryDto>(HttpStatusCode.OK, "Category retrieved successfully!", result);
+        
+        // Сохраняем в кеш с абсолютной эспирацией (5 минут)
+        var cacheEntryOptions = new MemoryCacheEntryOptions()
+            .SetAbsoluteExpiration(TimeSpan.FromMinutes(5));
+        memoryCache.Set(cacheKey, response, cacheEntryOptions);
+        
+        return response;
         
         /*catch (Exception ex)
         {
